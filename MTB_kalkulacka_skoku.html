@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTB Kalkulačka Skoku</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin: auto;
+        }
+        h2 {
+            color: #0073e6;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+            text-align: left;
+        }
+        input, input[type='range'] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        #result {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 15px;
+        }
+        canvas {
+            max-width: 100%;
+            background: white;
+            margin-top: 20px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            background-color: #0073e6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #005bb5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>MTB Kalkulačka Skoku</h2>
+        <label>Rychlost vzletu (km/h):</label>
+        <input type="number" id="speed" value="37" oninput="calculateJump()">
+        <label>Úhel odrazu (°): <span id="angleValue">30</span></label>
+        <input type="range" id="angle" min="10" max="60" value="30" oninput="updateAngle()">
+        <label>Výška skoku (m): <span id="heightValue">20</span></label>
+        <input type="range" id="height" min="0" max="20" step="0.1" value="20" oninput="updateHeight()">
+        <h3 id="result"></h3>
+        <button onclick="applyOptimalAngle()">Použít nejlepší úhel</button>
+        <canvas id="rampChart"></canvas>
+    </div>
+
+    <script>
+        let optimalAngle = 30;
+
+        function calculateJump() {
+            let speed = parseFloat(document.getElementById('speed').value) / 3.6;
+            let angle = parseFloat(document.getElementById('angle').value) * Math.PI / 180;
+            let height = parseFloat(document.getElementById('height').value);
+            let g = 9.81;
+
+            let v0x = speed * Math.cos(angle);
+            let v0y = speed * Math.sin(angle);
+            let t = (v0y + Math.sqrt(Math.max(v0y * v0y + 2 * g * height, 0))) / g;
+            let distance = v0x * t;
+
+            document.getElementById('result').innerText = `Délka skoku: ${distance.toFixed(2)} m`;
+            updateChart(height);
+            calculateOptimalAngle(speed);
+        }
+
+        function updateAngle() {
+            let angle = document.getElementById('angle').value;
+            document.getElementById('angleValue').innerText = angle;
+            calculateJump();
+        }
+
+        function updateHeight() {
+            let height = document.getElementById('height').value;
+            document.getElementById('heightValue').innerText = height;
+            calculateJump();
+        }
+
+        function calculateOptimalAngle(speed) {
+            let g = 9.81;
+            let bestAngle = 0;
+            let maxDistance = 0;
+
+            for (let angleDeg = 10; angleDeg <= 60; angleDeg++) {
+                let angle = angleDeg * Math.PI / 180;
+                let v0x = speed * Math.cos(angle);
+                let v0y = speed * Math.sin(angle);
+                let height = parseFloat(document.getElementById('height').value);
+
+                let t = (v0y + Math.sqrt(Math.max(v0y * v0y + 2 * g * height, 0))) / g;
+                let distance = v0x * t;
+
+                if (distance > maxDistance) {
+                    maxDistance = distance;
+                    bestAngle = angleDeg;
+                }
+            }
+            optimalAngle = bestAngle;
+        }
+
+        function applyOptimalAngle() {
+            document.getElementById('angle').value = optimalAngle;
+            document.getElementById('angleValue').innerText = optimalAngle;
+            calculateJump();
+        }
+
+        function updateChart(height) {
+            let ctx = document.getElementById('rampChart').getContext('2d');
+            let radius = height * 3;
+            let hypotenuse = Math.sqrt(radius * radius - height * height);
+            let length = hypotenuse * Math.cos(Math.PI / 4);
+
+            let data = {
+                labels: ['Radius', 'Hypotenuse', 'Length'],
+                datasets: [{
+                    label: 'Délky rampy (m)',
+                    data: [radius, hypotenuse, length],
+                    backgroundColor: ['orange', 'green', 'purple']
+                }]
+            };
+
+            if (window.rampChartInstance) window.rampChartInstance.destroy();
+            window.rampChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        calculateJump();
+    </script>
+</body>
+</html>
